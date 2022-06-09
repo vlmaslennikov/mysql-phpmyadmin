@@ -13,9 +13,11 @@ Help()
    echo 
    printf "If you want to set a password for mysql \nthe first argument must be mysql=password \nwhere 'password' is your mysql user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n"
    printf "MYSQL dump or exits database must be call 'new_db'\n"
-   echo "    Second argument (optional) :  if you want to install phpmyadmin must be [phpmyadmin]"
+   printf "    Second argument:  should be [root] \n"
+   printf "If you want to set a password for mysql root user \nthe second argument must be root=password \nwhere 'password' is your mysql root user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n"
+   echo "    Third argument (optional) :  if you want to install phpmyadmin must be [phpmyadmin]\n"
    echo
-   printf "If you want to set a password for phpmyadmin \nthe first argument must be phpmyadmin=password \nwhere 'password' is your phpmyadmin user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n"
+   printf "If you want to set a password for phpmyadmin \nthe first third must be phpmyadmin=password \nwhere 'password' is your phpmyadmin user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n"
    echo "Options:"
    echo "-h     display this help end exit"
 }
@@ -42,8 +44,10 @@ if [ $OS != "debian" ] || [ $OS_VERSION != '"11"' ]
 fi
 
 MYSQL_ARG=$( cut -f1 -d '=' <<< $1 )
+MYSQL_ROOT_ARG=$( cut -f1 -d '=' <<< $2 )
+PHPMYADMIN_ARG=$( cut -f1 -d '=' <<< $3 )
 
-if [[ $MYSQL_ARG != 'mysql' ]]
+if [ $MYSQL_ARG != 'mysql' ] || [ $MYSQL_ROOT_ARG != 'root' ]
 
     then 
         echo "Error: Invalid 1st argument"
@@ -53,13 +57,14 @@ if [[ $MYSQL_ARG != 'mysql' ]]
         if grep -q "=" <<< $1;
             then
                 MYSQL_USER_PASSWORD=$( cut -d '=' -f2 <<< $1 )
+                MYSQL_ROOT_PASSWORD=$( cut -d '=' -f2 <<< $2 )
             else
                 MYSQL_USER_PASSWORD=$(openssl rand -base64 9)
+                MYSQL_ROOT_PASSWORD=$(openssl rand -base64 9)
         fi
 fi
 
-PHPMYADMIN_ARG=$( cut -f1 -d '=' <<< $2 )
-MYSQL_ROOT_PASSWORD='root'
+
 
 DB_NAME='new_db'
 USER_NAME='newuser'
@@ -106,9 +111,9 @@ echo
 if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
         
     then 
-        if grep -q "=" <<< $2;
+        if grep -q "=" <<< $3;
             then
-                PHPMYADMIN_USER_PASSWORD=$( cut -d '=' -f2 <<< $2 )
+                PHPMYADMIN_USER_PASSWORD=$( cut -d '=' -f2 <<< $3 )
             else
                 PHPMYADMIN_USER_PASSWORD=$(openssl rand -base64 9)
         fi
@@ -156,7 +161,7 @@ UPDATE mysql.user SET authentication_string=null WHERE User='root';
 
 flush privileges;
 
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_ROOT_PASSWORD}';
 
 flush privileges;
 

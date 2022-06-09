@@ -10,7 +10,7 @@ Bash script for installing mysql & phpmyadmin (optional) only for Debian 11
 
 2) Superuser rights
 
-3) Mysql dump in directory with script. File must be call `new_db.sql`
+3) Mysql dump in directory with script. File must be called `new_db.sql`
 
 ## 2. Project configuration
 
@@ -32,11 +32,15 @@ sudo ./mysql-phpmyadmin-install.sh [ARGS...]
     
 If you want to set a password for mysql the first argument must be `mysql=password` where `'password'` is your mysql user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
+### Second argument: 
+ Should be called  `'root'` 
+    
+If you want to set a password for mysql root user the second argument must be `root=password` where `'password'` is your mysql root user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
- ### Second argument (optional) :  
+ ### Third argument (optional) :  
  If you want to install phpmyadmin must be  `'phpmyadmin'` 
    
-If you want to set a password for phpmyadmin the first argument must be `phpmyadmin=password`  where `'password'` is your phpmyadmin user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
+If you want to set a password for phpmyadmin the third argument must be `phpmyadmin=password`  where `'password'` is your phpmyadmin user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
 ### Options:
  ```-h   ```       display  help end exit 
@@ -56,7 +60,6 @@ MYSQL DB NAME - new_db
 MYSQL port - 3306
 ALLOWED IP ADRESS FOR MYSQL - 127.0.0.1
 
-PHPMYADMIN USER NAME - newuser
 PHPMYADMIN USER PASSWORD - password2
 PHPMYADMIN URL - http://localhost/phpmyadmin/
  ```
