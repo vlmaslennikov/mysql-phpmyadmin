@@ -15,7 +15,7 @@ Help()
    printf "MYSQL dump or exits database must be call 'new_db'\n"
    echo "    Second argument (optional) :  if you want to install phpmyadmin must be [phpmyadmin]"
    echo
-   printf "If you want to set a password for mysql \nthe first argument must be phpmyadmin=password \nwhere 'password' is your phpmyadmin user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n"
+   printf "If you want to set a password for phpmyadmin \nthe first argument must be phpmyadmin=password \nwhere 'password' is your phpmyadmin user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n"
    echo "Options:"
    echo "-h     display this help end exit"
 }
@@ -34,33 +34,31 @@ done
 OS=$(cut -d '=' -f2 <<< $(grep '^ID=' /etc/os-release ))
 OS_VERSION=$(cut -d '=' -f2 <<< $(grep '^VERSION_ID' /etc/os-release ))
 
-if [ $OS != "debian" ] && [ $OS_VERSION != '"11"' ]
+if [ $OS != "debian" ] || [ $OS_VERSION != '"11"' ]
 
     then
         echo "Error: Invalid OS or OS VERSION ; Must be only DEBIAN 11 !"
         exit ;
 fi
 
-MYSQL_ARG=''
-PHPMYADMIN_ARG=''
-MYSQL_USER_PASSWORD=''
-PHPMYADMIN_USER_PASSWORD=''
 MYSQL_ARG=$( cut -f1 -d '=' <<< $1 )
 
-    if [[ $MYSQL_ARG != 'mysql' ]]
+if [[ $MYSQL_ARG != 'mysql' ]]
 
-        then 
-            echo "Error: Invalid 1st argument"
-            exit ;
+    then 
+        echo "Error: Invalid 1st argument"
+        exit ;
 
-        else 
-            MYSQL_USER_PASSWORD=$( cut -d '=' -f2 <<< $1 )
-    fi
+    else 
+        if grep -q "=" <<< $1;
+            then
+                MYSQL_USER_PASSWORD=$( cut -d '=' -f2 <<< $1 )
+            else
+                MYSQL_USER_PASSWORD=$(openssl rand -base64 9)
+        fi
+fi
 
 PHPMYADMIN_ARG=$( cut -f1 -d '=' <<< $2 )
-RANDOM_MYSQL_PASSWORD="$(openssl rand -base64 9)"
-RANDOM_PHPMYADMIN_PASSWORD="$(openssl rand -base64 9)"
-
 MYSQL_ROOT_PASSWORD='root'
 
 DB_NAME='new_db'
@@ -83,10 +81,74 @@ apt update
 
 apt -yq install mysql-server 
 
+sed -i "$ a \ \nbind-address = ${IP_ADRESS}" /etc/mysql/mysql.conf.d/mysqld.cnf
+
+mysql -uroot -e "CREATE USER ${USER_NAME}@${IP_ADRESS} IDENTIFIED BY '${MYSQL_USER_PASSWORD}';"
+
+if ! $( mysql -uroot  -e "use ${DB_NAME}");
+
+    then 
+        cd $LOCATION
+        mysql -uroot  -e "CREATE DATABASE ${DB_NAME};"
+        mysql -uroot  -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${USER_NAME}'@'${IP_ADRESS}';"
+        mysql -uroot  -e "FLUSH PRIVILEGES;"
+        mysql -uroot  ${DB_NAME} < ${DB_NAME}.sql ;
+        echo
+        echo "Mysql dump loaded successfully !"
+        echo
+
+fi
+
+echo
+echo 'Installing and configuring mysql was successful !'
+echo
+
+if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
+        
+    then 
+        if grep -q "=" <<< $2;
+            then
+                PHPMYADMIN_USER_PASSWORD=$( cut -d '=' -f2 <<< $2 )
+            else
+                PHPMYADMIN_USER_PASSWORD=$(openssl rand -base64 9)
+        fi
+
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get -yq install phpmyadmin
+
+        MYSQL_SOCKET=$(mysql -uroot -e "status" | grep "^UNIX socket" | cut -d ':' -f2 | sed -e 's/^[[:space:]]*//')
+
+        sed -i "$ a \ \n\$i++; \n\$cfg['Servers'][\$i]['host'] = '${IP_ADRESS}'; \n\$cfg['Servers'][\$i]['user'] = '${USER_NAME}'; \n\$cfg['Servers'][\$i]['password'] = '${PHPMYADMIN_USER_PASSWORD}'; \n\$cfg['Servers'][\$i]['auth_type'] = 'config'; \n\$cfg['Servers'][\$i]['socket'] = '${MYSQL_SOCKET}';" /etc/phpmyadmin/config.inc.php
+        sed -i "$ a \ \nInclude /etc/phpmyadmin/apache.conf " /etc/apache2/apache2.conf
+
+        sed -i "/\$dbuser/d" /etc/phpmyadmin/config-db.php
+        sed -i "/\$dbpass/d" /etc/phpmyadmin/config-db.php
+        sed -i "/\$dbname/d" /etc/phpmyadmin/config-db.php
+        sed -i "/\$dbserver/d" /etc/phpmyadmin/config-db.php
+
+        sed -i "$ a \ \n\$dbuser='${USER_NAME}';" /etc/phpmyadmin/config-db.php
+        sed -i "$ a \ \n\$dbname='${DB_NAME}';" /etc/phpmyadmin/config-db.php
+        sed -i "$ a \ \n\$dbpass='${MYSQL_USER_PASSWORD}';" /etc/phpmyadmin/config-db.php
+        sed -i "$ a \ \n\$dbserver='${IP_ADRESS}';" /etc/phpmyadmin/config-db.php
+
+        PHP_V=$(php -v | grep "^PHP" | cut -d ' ' -f2 | rev |cut -d"." -f2- |rev)
+
+        apt install libapache2-mod-php${PHP_V}
+
+        systemctl restart apache2
+        
+        echo
+        echo 'Installing and phpmyadmin mysql was successful !'
+fi
+
+systemctl stop mysql
+
 mysqld_safe --skip-grant-tables&
 
 PID=$!
 kill $PID
+
+systemctl start mysql
 
 mysql --user=root mysql <<MYSQL_SCRIPT
 
@@ -100,83 +162,24 @@ flush privileges;
 
 MYSQL_SCRIPT
 
-sed -i "$ a \ \nbind-address = ${IP_ADRESS}" /etc/mysql/mysql.conf.d/mysqld.cnf
-
-if [ -z $MYSQL_USER_PASSWORD ]
-
-    then 
-        MYSQL_USER_PASSWORD=$RANDOM_MYSQL_PASSWORD
-
-fi
-
-mysql -uroot --password='root' -e "CREATE USER ${USER_NAME}@${IP_ADRESS} IDENTIFIED BY '${MYSQL_USER_PASSWORD}';"
-
-if ! $( mysql -uroot --password='root' -e "use ${DB_NAME}");
-
-    then 
-        cd $LOCATION
-        mysql -uroot --password='root' -e "CREATE DATABASE ${DB_NAME};"
-        mysql -uroot --password='root' -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${USER_NAME}'@'${IP_ADRESS}';"
-        mysql -uroot --password='root' -e "FLUSH PRIVILEGES;"
-        mysql -uroot --password='root' ${DB_NAME} < ${DB_NAME}.sql ;
-        echo
-        echo "Mysql dump loaded successfully !"
-        echo
-
-fi
 echo
-echo 'Installing and configuring mysql was successful !'
+echo "Installation and configuration of all components was successful !"
+echo
+echo "MYSQL ROOT NAME - root"
+echo "MYSQL ROOT PASSWORD - ${MYSQL_ROOT_PASSWORD}"
+echo "MYSQL USER NAME - ${USER_NAME}"
+echo "MYSQL USER PASSWORD - ${MYSQL_USER_PASSWORD}"
+echo "MYSQL DB NAME - ${DB_NAME}"
+echo "MYSQL port - 3306" 
+echo "ALLOWED IP ADRESS FOR MYSQL - ${IP_ADRESS}"
 echo
 if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
-        
-    then 
-        PHPMYADMIN_USER_PASSWORD=$( cut -d '=' -f2 <<< $2 )
-
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get -yq install phpmyadmin
-
-        sed -i "/<Directory \/usr\/share\/phpmyadmin>/a \ Order Deny,Allow \ \n Deny from all \ \n Allow from ${IP_ADRESS}" /etc/phpmyadmin/apache.conf
-
- 
-        if [ -z $PHPMYADMIN_USER_PASSWORD ]
-
-            then 
-                PHPMYADMIN_USER_PASSWORD=$RANDOM_PHPMYADMIN_PASSWORD
-
-        fi
-
-
-        sed -i "/<Directory \/usr\/share\/phpmyadmin>/a \ Order Deny,Allow \ \n Deny from all \ \n Allow from ${IP_ADRESS}" /etc/phpmyadmin/apache.conf
-        sed -i "$ a \ \n\$i++; \n\$cfg['Servers'][\$i]['host'] = ${IP_ADRESS}; \n\$cfg['Servers'][\$i]['user'] = ${USER_NAME}; \n\$cfg['Servers'][\$i]['password'] = ${PHPMYADMIN_USER_PASSWORD}; \n\$cfg['Servers'][\$i]['auth_type'] = 'config';" /etc/phpmyadmin/config.inc.php
-        sed -i "$ a \ \nInclude /etc/phpmyadmin/apache.conf " /etc/apache2/apache2.conf
-
-
-        sed -i "/\$dbuser/d" /etc/phpmyadmin/config-db.php
-        sed -i "/\$dbpass/d" /etc/phpmyadmin/config-db.php
-        sed -i "/\$dbname/d" /etc/phpmyadmin/config-db.php
-
-        sed -i "$ a \ \n\$dbuser='${USER_NAME}'" /etc/phpmyadmin/config-db.php
-        sed -i "$ a \ \n\$dbname='${DB_NAME}'" /etc/phpmyadmin/config-db.php
-        sed -i "$ a \ \n\$dbpass='${MYSQL_USER_PASSWORD}'" /etc/phpmyadmin/config-db.php
-
-        systemctl restart apache2
-        echo
-        echo 'Installing and phpmyadmin mysql was successful !'
-fi 
- echo
- echo "Installation and configuration of all components was successful !"
- echo
- echo "MYSQL USER NAME  ${USER_NAME}"
- echo "MYSQL USER PASSWORD  ${MYSQL_USER_PASSWORD}"
- echo "MYSQL DB NAME  ${DB_NAME}"
- echo "MYSQL port - 3306" 
- echo
- if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
-    then
-     echo "PHPMYADMIN USER NAME  ${USER_NAME}"
-     echo "PHPMYADMIN USER PASSWORD  ${PHPMYADMIN_USER_PASSWORD}"
-     echo "PHPMYADMIN URL - http://localhost/phpmyadmin/" 
+   then
+       echo "PHPMYADMIN USER NAME - ${USER_NAME}"
+       echo "PHPMYADMIN USER PASSWORD - ${PHPMYADMIN_USER_PASSWORD}"
+       echo "PHPMYADMIN URL - http://localhost/phpmyadmin/" 
 fi
- echo "ALLOWED IP ADRESS - ${IP_ADRESS}"
+
+
 
  
