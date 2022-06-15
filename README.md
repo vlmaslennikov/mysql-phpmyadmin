@@ -1,6 +1,6 @@
 # Mysql & Phpmyadmin installer
 
-Bash script for installing mysql & phpmyadmin (optional) only for Debian 11
+Bash script for installing mysql and/or phpmyadmin only for Debian 11
 
 ## 1. Requirements
 1)
@@ -27,6 +27,8 @@ cd ./mysql-phpmyadmin
 sudo ./mysql-phpmyadmin-install.sh [ARGS...]
 ```
  
+## IF YOU WANT TO INSTALL MYSQL ( WITH OR WITHOUT PHPMYADMIN ):
+
 ### First argument: 
  Should be called  `'mysql'` 
     
@@ -37,8 +39,15 @@ If you want to set a password for mysql the first argument must be `mysql=passwo
     
 If you want to set a password for mysql root user the second argument must be `root=password` where `'password'` is your mysql root user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
- ### Third argument (optional) :  
+### Third argument (optional) :  
  If you want to install phpmyadmin must be  `'phpmyadmin'` 
+   
+If you want to set a password for phpmyadmin the third argument must be `phpmyadmin=password`  where `'password'` is your phpmyadmin user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
+
+## IF YOU WANT TO INSTALL ONLY PHPMYADMIN:
+
+### Only one argument :  
+  `'phpmyadmin'` 
    
 If you want to set a password for phpmyadmin the third argument must be `phpmyadmin=password`  where `'password'` is your phpmyadmin user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
