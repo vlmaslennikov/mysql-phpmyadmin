@@ -31,17 +31,22 @@ sudo ./mysql-phpmyadmin-install.sh [ARGS...]
 
 ### First argument: 
  Should be called  `'mysql'` 
-    
+  
 If you want to set a password for mysql the first argument must be `mysql=password` where `'password'` is your mysql user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
 ### Second argument: 
  Should be called  `'root'` 
-    
+
 If you want to set a password for mysql root user the second argument must be `root=password` where `'password'` is your mysql root user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
-### Third argument (optional) :  
+### Third argument: 
+ Should be allowed IP for mysql user
+ 
+If the entered IP is invalid, then the value `127.0.0.1` will be used
+
+### Fourth argument (optional) :  
  If you want to install phpmyadmin must be called `'phpmyadmin'` 
-   
+ 
 If you want to set a password for phpmyadmin the third argument must be `phpmyadmin=password`  where `'password'` is your phpmyadmin user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
 ## IF YOU WANT TO INSTALL ONLY PHPMYADMIN:
@@ -63,12 +68,12 @@ If you want to set a password for phpmyadmin the third argument must be `phpmyad
 
 ### Fifth argument :  
  Should be mysql host
-   
+ 
 ### Options:
  ```-h   ```       display  help end exit 
 
 
-  
+
  Upon successful completion of the installation script, the user credentials and connection information will be displayed in the console
 
  ``` 
@@ -91,4 +96,3 @@ PHPMYADMIN URL - http://localhost/phpmyadmin/
 
 
 
-  

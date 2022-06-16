@@ -16,7 +16,9 @@ Help(){
    printf "MYSQL dump or exits database must be called 'new_db'\n\n"
    printf "    Second argument:  should be called [root] \n"
    printf "If you want to set a password for mysql root user \nthe second argument must be root=password \nwhere 'password' is your mysql root user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n\n"
-   printf "    Third argument (optional) :  if you want to install phpmyadmin must be called [phpmyadmin]\n"
+   printf "    Third argument:  should be allowed ip for mysql user\n"
+   printf "If the entered IP is invalid, then the value 127.0.0.1 will be used\n\n"
+   printf "    Fourth argument (optional) :  if you want to install phpmyadmin must be called [phpmyadmin]\n"
    printf "If you want to set a password for phpmyadmin \nthe first third must be phpmyadmin=password \nwhere 'password' is your phpmyadmin user password, \notherwise the password will be automatically generated \nand displayed after the successful completion \nof the installation script\n\n"
    printf "IF YOU WANT TO INSTALL ONLY PHPMYADMIN:\n\n"
    printf "Arguments:\n"
@@ -109,17 +111,47 @@ InstallPhpMyAdmin(){
 
 }
 
+Valid_IP(){
+
+    local  ip=$1
+    local  stat=1
+
+    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; 
+
+        then
+            OIFS=$IFS
+            IFS='.'
+            ip=($ip)
+            IFS=$OIFS
+            [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 \
+                && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+            stat=$?
+
+    fi
+
+    return $stat
+}
+
 
 InstallPhpMyAdmin "single" $1 $2 $3 $4 $5 
 
 MYSQL_ARG=$( cut -f1 -d '=' <<< $1 )
 MYSQL_ROOT_ARG=$( cut -f1 -d '=' <<< $2 )
-PHPMYADMIN_ARG=$( cut -f1 -d '=' <<< $3 )
+PHPMYADMIN_ARG=$( cut -f1 -d '=' <<< $4 )
 
-IP_ADRESS='127.0.0.1'
 DB_NAME='new_db'
 USER_NAME='newuser'
 LOCATION=`pwd`
+
+if Valid_IP $3
+
+    then
+        ALLOWED_IP=$3
+    else
+        ALLOWED_IP='127.0.0.1'
+
+fi
+
 
 if [ $MYSQL_ARG != 'mysql' ] || [ $MYSQL_ROOT_ARG != 'root' ]
 
@@ -152,16 +184,16 @@ apt update
 
 apt -yq install mysql-server 
 
-sed -i "$ a \ \nbind-address = ${IP_ADRESS}" /etc/mysql/mysql.conf.d/mysqld.cnf
+sed -i "$ a \ \nbind-address = ${ALLOWED_IP}" /etc/mysql/mysql.conf.d/mysqld.cnf
 
-mysql -uroot -e "CREATE USER ${USER_NAME}@${IP_ADRESS} IDENTIFIED BY '${MYSQL_USER_PASSWORD}';"
+mysql -uroot -e "CREATE USER ${USER_NAME}@${ALLOWED_IP} IDENTIFIED BY '${MYSQL_USER_PASSWORD}';"
 
 if ! $( mysql -uroot  -e "use ${DB_NAME}");
 
     then 
         cd $LOCATION
         mysql -uroot  -e "CREATE DATABASE ${DB_NAME};"
-        mysql -uroot  -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${USER_NAME}'@'${IP_ADRESS}';"
+        mysql -uroot  -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${USER_NAME}'@'${ALLOWED_IP}';"
         mysql -uroot  -e "FLUSH PRIVILEGES;"
         mysql -uroot  ${DB_NAME} < ${DB_NAME}.sql ;
         echo
@@ -177,7 +209,7 @@ echo
 if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
         
     then 
-        InstallPhpMyAdmin "multipurpose" $3 $USER_NAME $MYSQL_USER_PASSWORD $DB_NAME $IP_ADRESS
+        InstallPhpMyAdmin "multipurpose" $4 $USER_NAME $MYSQL_USER_PASSWORD $DB_NAME $ALLOWED_IP
 fi
 
 systemctl stop mysql
@@ -211,7 +243,7 @@ echo "MYSQL USER NAME - ${USER_NAME}"
 echo "MYSQL USER PASSWORD - ${MYSQL_USER_PASSWORD}"
 echo "MYSQL DB NAME - ${DB_NAME}"
 echo "MYSQL port - 3306" 
-echo "ALLOWED IP ADRESS FOR MYSQL - ${IP_ADRESS}"
+echo "ALLOWED IP ADRESS FOR MYSQL USER '${USER_NAME}'- ${ALLOWED_IP}"
 echo
 if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
    then
