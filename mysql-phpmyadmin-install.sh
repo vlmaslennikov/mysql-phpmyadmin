@@ -177,7 +177,7 @@ echo
 if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
         
     then 
-        InstallPhpMyAdmin "multipurpose" $3 $USER_NAME $MYSQL_USER_PASSWORD $DB_NAME
+        InstallPhpMyAdmin "multipurpose" $3 $USER_NAME $MYSQL_USER_PASSWORD $DB_NAME $IP_ADRESS
 fi
 
 systemctl stop mysql
