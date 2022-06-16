@@ -54,6 +54,27 @@ if [ $OS != "debian" ] || [ $OS_VERSION != '"11"' ]
         exit ;
 fi
 
+Valid_IP(){
+
+    local  ip=$1
+    local  stat=1
+
+    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; 
+
+        then
+            OIFS=$IFS
+            IFS='.'
+            ip=($ip)
+            IFS=$OIFS
+            [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 \
+                && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+            stat=$?
+
+    fi
+
+    return $stat
+}
+
 InstallPhpMyAdmin(){
 
     if [[ $( cut -f1 -d '=' <<< $2 ) = "phpmyadmin" ]]
@@ -65,6 +86,15 @@ InstallPhpMyAdmin(){
                     PHPMYADMIN_USER_PASSWORD=$( cut -d '=' -f2 <<< $2 )
                 else
                     PHPMYADMIN_USER_PASSWORD=$(openssl rand -base64 9)
+            fi
+
+            if Valid_IP $6
+
+                then
+                    MYSQL_HOST=$6
+                else
+                    MYSQL_HOST='127.0.0.1'
+
             fi
 
             export DEBIAN_FRONTEND=noninteractive
@@ -79,7 +109,7 @@ InstallPhpMyAdmin(){
 
             sed -i "$ a \ \nInclude /etc/phpmyadmin/apache.conf " /etc/apache2/apache2.conf
 
-            sed -i "$ a \ \n\$i++; \n\$cfg['Servers'][\$i]['host'] = '${6}'; \n\$cfg['Servers'][\$i]['user'] = '${3}'; \n\$cfg['Servers'][\$i]['password'] = '${PHPMYADMIN_USER_PASSWORD}'; \n\$cfg['Servers'][\$i]['auth_type'] = 'config';" /etc/phpmyadmin/config.inc.php
+            sed -i "$ a \ \n\$i++; \n\$cfg['Servers'][\$i]['host'] = '${MYSQL_HOST}'; \n\$cfg['Servers'][\$i]['user'] = '${3}'; \n\$cfg['Servers'][\$i]['password'] = '${PHPMYADMIN_USER_PASSWORD}'; \n\$cfg['Servers'][\$i]['auth_type'] = 'config';" /etc/phpmyadmin/config.inc.php
 
             sed -i "/\$dbuser/d" /etc/phpmyadmin/config-db.php
             sed -i "/\$dbpass/d" /etc/phpmyadmin/config-db.php
@@ -89,7 +119,7 @@ InstallPhpMyAdmin(){
             sed -i "$ a \ \n\$dbuser='${3}';" /etc/phpmyadmin/config-db.php
             sed -i "$ a \ \n\$dbpass='${4}';" /etc/phpmyadmin/config-db.php
             sed -i "$ a \ \n\$dbname='${5}';" /etc/phpmyadmin/config-db.php
-            sed -i "$ a \ \n\$dbserver='${6}';" /etc/phpmyadmin/config-db.php
+            sed -i "$ a \ \n\$dbserver='${MYSQL_HOST}';" /etc/phpmyadmin/config-db.php
 
             PHP_V=$(php -v | grep "^PHP" | cut -d ' ' -f2 | rev |cut -d"." -f2- |rev)
 
@@ -111,26 +141,7 @@ InstallPhpMyAdmin(){
 
 }
 
-Valid_IP(){
 
-    local  ip=$1
-    local  stat=1
-
-    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; 
-
-        then
-            OIFS=$IFS
-            IFS='.'
-            ip=($ip)
-            IFS=$OIFS
-            [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 \
-                && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
-            stat=$?
-
-    fi
-
-    return $stat
-}
 
 
 InstallPhpMyAdmin "single" $1 $2 $3 $4 $5 
@@ -242,8 +253,9 @@ echo "MYSQL ROOT PASSWORD - ${MYSQL_ROOT_PASSWORD}"
 echo "MYSQL USER NAME - ${USER_NAME}"
 echo "MYSQL USER PASSWORD - ${MYSQL_USER_PASSWORD}"
 echo "MYSQL DB NAME - ${DB_NAME}"
-echo "MYSQL port - 3306" 
-echo "ALLOWED IP ADRESS FOR MYSQL USER '${USER_NAME}'- ${ALLOWED_IP}"
+echo "MYSQL PORT - 3306" 
+echo "ALLOWED IP FOR MYSQL ROOT - localhost"
+echo "ALLOWED IP FOR MYSQL USER '${USER_NAME}'- ${ALLOWED_IP}"
 echo
 if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
    then
