@@ -40,17 +40,30 @@ If you want to set a password for mysql the first argument must be `mysql=passwo
 If you want to set a password for mysql root user the second argument must be `root=password` where `'password'` is your mysql root user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
 ### Third argument (optional) :  
- If you want to install phpmyadmin must be  `'phpmyadmin'` 
+ If you want to install phpmyadmin must be called `'phpmyadmin'` 
    
 If you want to set a password for phpmyadmin the third argument must be `phpmyadmin=password`  where `'password'` is your phpmyadmin user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
 ## IF YOU WANT TO INSTALL ONLY PHPMYADMIN:
 
-### Only one argument :  
-  `'phpmyadmin'` 
-   
+### First argument :  
+ Should be called `'phpmyadmin'` 
+
 If you want to set a password for phpmyadmin the third argument must be `phpmyadmin=password`  where `'password'` is your phpmyadmin user password, otherwise the password will be automatically generated and displayed after the successful completion of the installation script
 
+
+### Second argument :  
+ Should be mysql user name 
+
+### Third argument :  
+ Should be mysql user password
+
+### Fourth argument :  
+ Should be mysql database name  
+
+### Fifth argument :  
+ Should be mysql host
+   
 ### Options:
  ```-h   ```       display  help end exit 
 
