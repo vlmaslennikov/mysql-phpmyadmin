@@ -195,8 +195,6 @@ apt update
 
 apt -yq install mysql-server 
 
-sed -i "$ a \ \nbind-address = ${ALLOWED_IP}" /etc/mysql/mysql.conf.d/mysqld.cnf
-
 mysql -uroot -e "CREATE USER ${USER_NAME}@${ALLOWED_IP} IDENTIFIED BY '${MYSQL_USER_PASSWORD}';"
 
 if ! $( mysql -uroot  -e "use ${DB_NAME}");
@@ -216,12 +214,12 @@ fi
 echo
 echo 'Installing and configuring mysql was successful !'
 echo
-
 if [[ $PHPMYADMIN_ARG = "phpmyadmin" ]]
         
     then 
         InstallPhpMyAdmin "multipurpose" $4 $USER_NAME $MYSQL_USER_PASSWORD $DB_NAME $ALLOWED_IP
 fi
+# sed -i "$ a \ \nbind-address = ${ALLOWED_IP}" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 systemctl stop mysql
 
